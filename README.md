@@ -36,7 +36,7 @@ Example:
 ### Flip Image
 Flips image horizontally or vertically.
 
-Horizontal flip:
+#### Horizontal flip
 ~~~
 Command:
 ./quadtree -m h <compression_level> <image_input> <image_output>
@@ -45,7 +45,7 @@ Example:
 ~~~
 <img src=https://i.imgur.com/cBrSKnK.png width="256" height="256"/>
 
-Vertical flip:
+#### Vertical flip
 ~~~
 Command:
 ./quadtree -m v <compression_level> <image_input> <image_output>
