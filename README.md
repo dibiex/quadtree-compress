@@ -35,6 +35,7 @@ Example:
 ~~~
 ### Flip Image
 Flips image horizontally or vertically.
+
 Horizontal flip:
 ~~~
 Command:
