@@ -26,7 +26,7 @@ Example:
 ./quadtree -c 370 image.ppm binary.out
 ~~~
 ### Decompress image
-Decompresses the binary output of the compress comman into an image.
+Decompresses the binary output of the compress command into an image.
 ~~~
 Command:
 ./quadtree -d <binary_input> <image_output>
