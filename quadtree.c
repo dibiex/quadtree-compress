@@ -5,8 +5,8 @@
 #include <math.h>
 
 /*
- * Structura pentru retinerea rgb
- * folosit la citirea din matrice
+ *	RGB struct used for 
+ *	reading from a matrix
  */ 
 typedef struct rgb{
 
@@ -17,7 +17,7 @@ typedef struct rgb{
 }rgb_t;
 
 /*
- * Structura arborelui
+ *	Tree struct
  */
 typedef struct QuadtreeNode {
 	
@@ -31,7 +31,7 @@ typedef struct QuadtreeNode {
  }__attribute__((packed)) QuadtreeNode;
 
 /*
- * Structura vectorului
+ *	Vector struct
  */
 typedef struct vQuadtreeNode {
 	
@@ -44,17 +44,17 @@ typedef struct vQuadtreeNode {
  }__attribute__((packed)) vQuadtreeNode;
 
 /*
- * Functia de citire dintr-un fisier
- * returneaza o matrice de culori
+ *	Function used for reading from a file
+ *	returns a rgb matrix
  */
-rgb_t ** citire(int * height, int * width, char * fisier)
+rgb_t ** read(int * height, int * width, char * file)
 {
 	FILE * f;
 	char magic_num[3];
 	int color;
 	int i;
 
-	f = fopen(fisier, "rb");
+	f = fopen(file, "rb");
 	
 	fscanf(f, "%s"   ,magic_num);
 	fscanf(f, "%d "  ,width);
@@ -77,17 +77,17 @@ rgb_t ** citire(int * height, int * width, char * fisier)
 }
 
 /*
- * Functia de compresie
+ *	Compression function
  */
-void compresie(rgb_t ** matrix, QuadtreeNode ** nod, int x, int y, int size, int prag)
+void compression(rgb_t ** matrix, QuadtreeNode ** node, int x, int y, int size, int threshold)
 {
 	int i, j;
 	unsigned long long int blue=0, green=0, red=0, mean=0;
 
-	(*nod) = malloc(sizeof(QuadtreeNode));
-	(*nod)->area = size*size;
+	(*node) = malloc(sizeof(QuadtreeNode));
+	(*node)->area = size*size;
 
-// Calculare rgb mediu pe suprafata actuala
+// Compute medium rgb on the current area
 
 	for(i = y; i < y + size; i++)
 		for(j = x; j < x + size; j++)
@@ -101,11 +101,11 @@ void compresie(rgb_t ** matrix, QuadtreeNode ** nod, int x, int y, int size, int
 	red   = red   / (size * size);
 	green = green / (size * size);
 
-	(*nod)->rgb.blue  = blue;
-	(*nod)->rgb.red   = red;
-	(*nod)->rgb.green = green;
+	(*node)->rgb.blue  = blue;
+	(*node)->rgb.red   = red;
+	(*node)->rgb.green = green;
 
-// Calculare scor
+// Compute score
 
 	for(i = y; i < y + size; i++)
 		for(j = x; j < x + size; j++)
@@ -117,47 +117,47 @@ void compresie(rgb_t ** matrix, QuadtreeNode ** nod, int x, int y, int size, int
 
 	mean = mean / (3 * size * size);
 
-// Conditia de parcurgere
+// Traversal condition
 
-	if(mean > prag)
+	if(mean > threshold)
 	{
-		compresie(matrix, &(*nod)->top_left,     x,            y,            size/2, prag);
-		compresie(matrix, &(*nod)->top_right,    x + (size/2), y,            size/2, prag);
-		compresie(matrix, &(*nod)->bottom_right, x + (size/2), y + (size/2), size/2, prag);
-		compresie(matrix, &(*nod)->bottom_left,  x,            y + (size/2), size/2, prag);
+		compression(matrix, &(*node)->top_left,     x,            y,            size/2, threshold);
+		compression(matrix, &(*node)->top_right,    x + (size/2), y,            size/2, threshold);
+		compression(matrix, &(*node)->bottom_right, x + (size/2), y + (size/2), size/2, threshold);
+		compression(matrix, &(*node)->bottom_left,  x,            y + (size/2), size/2, threshold);
 		
 		return;
 	}
 	else
 	{
-		(*nod)->top_right    = NULL;
-		(*nod)->top_left     = NULL;
-		(*nod)->bottom_left  = NULL;
-		(*nod)->bottom_right = NULL;
+		(*node)->top_right    = NULL;
+		(*node)->top_left     = NULL;
+		(*node)->bottom_left  = NULL;
+		(*node)->bottom_right = NULL;
 		
 		return;
 	}
 }
 
 /*
- * Functie ce copiaza adresele nodurilor 
- * din arbore intr-un vector de pointeri
+ * Function used to copy nodes addresses 
+ * from the tree into a pointer vector
  */
-void parcurgere(QuadtreeNode * nod, QuadtreeNode ** vector[], unsigned int * index)
+void traversal(QuadtreeNode * node, QuadtreeNode ** vector[], unsigned int * index)
 {
-	if(nod != NULL)
+	if(node != NULL)
 	{
         if((*index) > 0)
       		(*vector) = realloc((*vector), sizeof(QuadtreeNode*) * ((*index) + 1));
         
-        (*vector)[(*index)] = nod;
-        nod->index = (*index);
+        (*vector)[(*index)] = node;
+        node->index = (*index);
         (*index)++;
 
-        parcurgere(nod->top_left,     vector, index);
-        parcurgere(nod->top_right,    vector, index);
-        parcurgere(nod->bottom_right, vector, index);
-        parcurgere(nod->bottom_left,  vector, index);
+        traversal(node->top_left,     vector, index);
+        traversal(node->top_right,    vector, index);
+        traversal(node->bottom_right, vector, index);
+        traversal(node->bottom_left,  vector, index);
 
 	}
 	else
@@ -165,8 +165,8 @@ void parcurgere(QuadtreeNode * nod, QuadtreeNode ** vector[], unsigned int * ind
 }
 
 /*
- * Folosind vectorul de la functia de mai sus
- * construieste vectorul ce va fi scris
+ *	Using the vector from above 
+ *	computes the vector that needs to be written
  */
 void copy_to_vector(QuadtreeNode ** vp, vQuadtreeNode ** v, int index)
 {
@@ -204,73 +204,73 @@ void copy_to_vector(QuadtreeNode ** vp, vQuadtreeNode ** v, int index)
 }
 
 /*
- * Citeste aborele dintr-un vector
+ *	Read a tree struct from a vector
  */
-void citire_arb(vQuadtreeNode * vec, QuadtreeNode ** nod, int i)
+void read_tree(vQuadtreeNode * vec, QuadtreeNode ** node, int i)
 {
-	(*nod) = malloc(sizeof(QuadtreeNode));
+	(*node) = malloc(sizeof(QuadtreeNode));
 
-	(*nod)->rgb.red   = vec[i].red;
-	(*nod)->rgb.blue  = vec[i].blue;
-	(*nod)->rgb.green = vec[i].green;
-	(*nod)->area      = vec[i].area;
-	(*nod)->index     = i;
+	(*node)->rgb.red   = vec[i].red;
+	(*node)->rgb.blue  = vec[i].blue;
+	(*node)->rgb.green = vec[i].green;
+	(*node)->area      = vec[i].area;
+	(*node)->index     = i;
 
 	if(vec[i].top_left != -1 && vec[i].top_right != -1 && vec[i].bottom_left != -1 && vec[i].bottom_right != -1)
 	{
-		citire_arb(vec, &(*nod)->top_left,     vec[i].top_left);
-		citire_arb(vec, &(*nod)->top_right,    vec[i].top_right);
-		citire_arb(vec, &(*nod)->bottom_left,  vec[i].bottom_left);
-		citire_arb(vec, &(*nod)->bottom_right, vec[i].bottom_right);
+		read_tree(vec, &(*node)->top_left,     vec[i].top_left);
+		read_tree(vec, &(*node)->top_right,    vec[i].top_right);
+		read_tree(vec, &(*node)->bottom_left,  vec[i].bottom_left);
+		read_tree(vec, &(*node)->bottom_right, vec[i].bottom_right);
 
 	}
 	else
 	{
-		(*nod)->top_left     = NULL;
-		(*nod)->top_right    = NULL;
-		(*nod)->bottom_left  = NULL;
-		(*nod)->bottom_right = NULL;
+		(*node)->top_left     = NULL;
+		(*node)->top_right    = NULL;
+		(*node)->bottom_left  = NULL;
+		(*node)->bottom_right = NULL;
 	}
 
 }
 
 /*
- * Parcurge arborele si construieste pe baza frunzelor
- * matricea de culori
+ *	Traverses tree and computes based on leafes
+ *	the rgb matrix
  */
-void decompresie(QuadtreeNode * nod, rgb_t *** matrix, int x, int y, int size)
+void decompression(QuadtreeNode * node, rgb_t *** matrix, int x, int y, int size)
 {
 	int i, j;
 
-	if(nod->top_left == NULL && nod->top_right == NULL && nod->bottom_right == NULL && nod->bottom_left == NULL)
+	if(node->top_left == NULL && node->top_right == NULL && node->bottom_right == NULL && node->bottom_left == NULL)
 	{
 		for(i = y; i < y + size; i++)
 			for(j = x; j < x + size; j++)
 			{
-				(*matrix)[i][j].red   = nod->rgb.red;
-				(*matrix)[i][j].green = nod->rgb.green;
-				(*matrix)[i][j].blue  = nod->rgb.blue;
+				(*matrix)[i][j].red   = node->rgb.red;
+				(*matrix)[i][j].green = node->rgb.green;
+				(*matrix)[i][j].blue  = node->rgb.blue;
 			}
 	}
 	else
 	{
-		decompresie(nod->top_left,     matrix, x,          y,          size/2);
-		decompresie(nod->top_right,    matrix, x+(size/2), y,          size/2);
-		decompresie(nod->bottom_right, matrix, x+(size/2), y+(size/2), size/2);
-		decompresie(nod->bottom_left,  matrix, x,          y+(size/2), size/2);
+		decompression(node->top_left,     matrix, x,          y,          size/2);
+		decompression(node->top_right,    matrix, x+(size/2), y,          size/2);
+		decompression(node->bottom_right, matrix, x+(size/2), y+(size/2), size/2);
+		decompression(node->bottom_left,  matrix, x,          y+(size/2), size/2);
 	}
 
-	free(nod);
+	free(node);
 }
 
 /*
- * Compune fisierul *.ppm pe baza
- * matricei de culori
+ *	Computes *.ppm file based on
+ *	the rgb matrix
  */
-void scriere_ppm(rgb_t ** mat, char * fisier, int size)
+void write_ppm(rgb_t ** mat, char * file, int size)
 {
 
-	FILE * f = fopen(fisier, "w");
+	FILE * f = fopen(file, "w");
 	
 	fprintf(f, "P6\n");
 	fprintf(f, "%d %d\n", size, size );
@@ -284,57 +284,55 @@ void scriere_ppm(rgb_t ** mat, char * fisier, int size)
 
 }
 /*
- * Parcurge arborele in adancime 
- * la intoarcere interschimband fii
+ *	Reverse tree horizontally
  */
-void orizontala(QuadtreeNode ** nod)
+void horizontal(QuadtreeNode ** node)
 {
-	if((*nod)->top_left != NULL && (*nod)->top_left != NULL && (*nod)->top_left != NULL && (*nod)->top_left != NULL)
+	if((*node)->top_left != NULL && (*node)->top_left != NULL && (*node)->top_left != NULL && (*node)->top_left != NULL)
 	{
-		orizontala(&(*nod)->top_left);
-		orizontala(&(*nod)->top_right);
-		orizontala(&(*nod)->bottom_right);
-		orizontala(&(*nod)->bottom_left);
+		horizontal(&(*node)->top_left);
+		horizontal(&(*node)->top_right);
+		horizontal(&(*node)->bottom_right);
+		horizontal(&(*node)->bottom_left);
 		
 		QuadtreeNode * aux;
 
-		aux 				 = (*nod)->top_left;
-		(*nod)->top_left 	 = (*nod)->bottom_left;
-		(*nod)->bottom_left  = aux;
+		aux 				 = (*node)->top_left;
+		(*node)->top_left 	 = (*node)->bottom_left;
+		(*node)->bottom_left  = aux;
 		
-		aux					 = (*nod)->top_right;
-		(*nod)->top_right	 = (*nod)->bottom_right;
-		(*nod)->bottom_right = aux;
+		aux					 = (*node)->top_right;
+		(*node)->top_right	 = (*node)->bottom_right;
+		(*node)->bottom_right = aux;
 	}
 }
 
 /*
- * Parcurge arborele in adancime 
- * la intoarcere interschimband fii
+ *	Reverse tree vertically 
  */
-void verticala(QuadtreeNode ** nod)
+void vertical(QuadtreeNode ** node)
 {
-	if((*nod)->top_left != NULL && (*nod)->top_left != NULL && (*nod)->top_left != NULL && (*nod)->top_left != NULL)
+	if((*node)->top_left != NULL && (*node)->top_left != NULL && (*node)->top_left != NULL && (*node)->top_left != NULL)
 	{
-		verticala(&(*nod)->top_left);
-		verticala(&(*nod)->top_right);
-		verticala(&(*nod)->bottom_right);
-		verticala(&(*nod)->bottom_left);
+		vertical(&(*node)->top_left);
+		vertical(&(*node)->top_right);
+		vertical(&(*node)->bottom_right);
+		vertical(&(*node)->bottom_left);
 
 		QuadtreeNode * aux;
 
-		aux					 = (*nod)->top_left;
-		(*nod)->top_left	 = (*nod)->top_right;
-		(*nod)->top_right	 = aux;
+		aux					 = (*node)->top_left;
+		(*node)->top_left	 = (*node)->top_right;
+		(*node)->top_right	 = aux;
 		
-		aux					 = (*nod)->bottom_left;
-		(*nod)->bottom_left	 = (*nod)->bottom_right;
-		(*nod)->bottom_right = aux;
+		aux					 = (*node)->bottom_left;
+		(*node)->bottom_left	 = (*node)->bottom_right;
+		(*node)->bottom_right = aux;
 	}
 }
 
 /* 
- * Returneaza minimul dintre a si b
+ *	Return minimum
  */
 uint32_t min(int a, int b)
 {
@@ -342,39 +340,39 @@ uint32_t min(int a, int b)
 }
 
 /*
- * Parcurge ambii arbori nod1 si nod2
- * calculand pentru fiecare nod suma algebrica a culorilor.
- * In cazul in care unul dintre arbori a ajuns la o frunza acesta il asteapta
- * pe celalt arbore sa se intoarca
+ * 	Traverses both trees node1 and node2
+ * 	computing for each node the average of the colours
+ * 	In case a tree has reached a leaf it waits for 
+ * 	the other one to return
  */
-void suprapunere(QuadtreeNode * nod1, QuadtreeNode * nod2, QuadtreeNode ** rez)
+void overlay(QuadtreeNode * node1, QuadtreeNode * node2, QuadtreeNode ** rez)
 {
 	(*rez) = malloc(sizeof(QuadtreeNode));
 	
-	if(nod1->top_left != NULL && nod2->top_left != NULL)
+	if(node1->top_left != NULL && node2->top_left != NULL)
 	{	
-		suprapunere(nod1->top_left, 	nod2->top_left,		&(*rez)->top_left);
-		suprapunere(nod1->top_right,	nod2->top_right,	&(*rez)->top_right);
-		suprapunere(nod1->bottom_right, nod2->bottom_right, &(*rez)->bottom_right);
-		suprapunere(nod1->bottom_left,	nod2->bottom_left,	&(*rez)->bottom_left);
+		overlay(node1->top_left, 	node2->top_left,		&(*rez)->top_left);
+		overlay(node1->top_right,	node2->top_right,	&(*rez)->top_right);
+		overlay(node1->bottom_right, node2->bottom_right, &(*rez)->bottom_right);
+		overlay(node1->bottom_left,	node2->bottom_left,	&(*rez)->bottom_left);
 
 	}
 	else
-		if(nod1->top_left == NULL && nod2->top_left != NULL)
+		if(node1->top_left == NULL && node2->top_left != NULL)
 		{
-		suprapunere(nod1, nod2->top_left,     &(*rez)->top_left);
-		suprapunere(nod1, nod2->top_right,    &(*rez)->top_right);
-		suprapunere(nod1, nod2->bottom_right, &(*rez)->bottom_right);
-		suprapunere(nod1, nod2->bottom_left,  &(*rez)->bottom_left);
+		overlay(node1, node2->top_left,     &(*rez)->top_left);
+		overlay(node1, node2->top_right,    &(*rez)->top_right);
+		overlay(node1, node2->bottom_right, &(*rez)->bottom_right);
+		overlay(node1, node2->bottom_left,  &(*rez)->bottom_left);
 		}
 		else
 		
-			if(nod1->top_left != NULL && nod2->top_left == NULL)
+			if(node1->top_left != NULL && node2->top_left == NULL)
 			{
-				suprapunere(nod1->top_left,     nod2, &(*rez)->top_left);
-				suprapunere(nod1->top_right,    nod2, &(*rez)->top_right);
-				suprapunere(nod1->bottom_right, nod2, &(*rez)->bottom_right);
-				suprapunere(nod1->bottom_left,  nod2, &(*rez)->bottom_left);
+				overlay(node1->top_left,     node2, &(*rez)->top_left);
+				overlay(node1->top_right,    node2, &(*rez)->top_right);
+				overlay(node1->bottom_right, node2, &(*rez)->bottom_right);
+				overlay(node1->bottom_left,  node2, &(*rez)->bottom_left);
 			}
 			else
 				{
@@ -384,26 +382,26 @@ void suprapunere(QuadtreeNode * nod1, QuadtreeNode * nod2, QuadtreeNode ** rez)
 					(*rez)->bottom_right = NULL;
 				}
 	
-	(*rez)->area      = min(nod1->area, nod2->area);
-	(*rez)->rgb.blue  = (nod1->rgb.blue  + nod2->rgb.blue)  / 2;
-	(*rez)->rgb.red   = (nod1->rgb.red   + nod2->rgb.red)   / 2;
-	(*rez)->rgb.green = (nod1->rgb.green + nod2->rgb.green) / 2;
+	(*rez)->area      = min(node1->area, node2->area);
+	(*rez)->rgb.blue  = (node1->rgb.blue  + node2->rgb.blue)  / 2;
+	(*rez)->rgb.red   = (node1->rgb.red   + node2->rgb.red)   / 2;
+	(*rez)->rgb.green = (node1->rgb.green + node2->rgb.green) / 2;
 
 }
 
 /*
- * Dealoca un arbore
+ *	Free tree from memory
  */
-void free_arb(QuadtreeNode ** nod)
+void free_tree(QuadtreeNode ** node)
 {
-	if((*nod)->top_left != NULL && (*nod)->top_left != NULL && (*nod)->top_left != NULL && (*nod)->top_left != NULL)
+	if((*node)->top_left != NULL && (*node)->top_left != NULL && (*node)->top_left != NULL && (*node)->top_left != NULL)
 	{
-		free_arb(&(*nod)->top_left);
-		free_arb(&(*nod)->top_right);
-		free_arb(&(*nod)->bottom_right);
-		free_arb(&(*nod)->bottom_left);
+		free_tree(&(*node)->top_left);
+		free_tree(&(*node)->top_right);
+		free_tree(&(*node)->bottom_right);
+		free_tree(&(*node)->bottom_left);
 	}
-	free((*nod));
+	free((*node));
 }
 
 int main(int argc, char * argv[])
@@ -413,18 +411,18 @@ int main(int argc, char * argv[])
 	{
 		unsigned int index=0;
 		unsigned int i;
-		int prag, width, height;
+		int threshold, width, height;
 		
 		rgb_t **r;
-		QuadtreeNode * nod=NULL;
+		QuadtreeNode * node=NULL;
 
-		r = citire(&height, &width, argv[3]);
-		prag = atoi(argv[2]);
-		compresie(r, &nod, 0, 0, width, prag);
+		r = read(&height, &width, argv[3]);
+		threshold = atoi(argv[2]);
+		compression(r, &node, 0, 0, width, threshold);
 
-		// Vector de pointeri catre nodurile arborelui
+		// Vector of pointers to the tree nodes
 		QuadtreeNode ** vector = malloc(sizeof(QuadtreeNode*));
-		parcurgere(nod, &vector, &index);
+		traversal(node, &vector, &index);
 
 		vQuadtreeNode * vec=malloc(sizeof(vQuadtreeNode)*index);
 		copy_to_vector(vector,&vec,index);
@@ -433,7 +431,7 @@ int main(int argc, char * argv[])
 			free(vector[i]);
 		free(vector);
 
-		//Scrierea vectorului in fisier
+		// Write vector in a file
 		FILE * f = fopen(argv[4], "wb");
 
 		unsigned int count = 0;
@@ -454,7 +452,7 @@ int main(int argc, char * argv[])
 		}
 		free(vec);
 
-		// Dealocare
+		// Free memory
 		for(i=0;i<height;i++)
 			free(r[i]);
 		free(r);
@@ -471,30 +469,30 @@ int main(int argc, char * argv[])
 			
 			FILE * f = fopen(argv[2], "rb");
 			fread(&colors, sizeof(int), 1, f);
-			// Citire numar de noduri
+			// Read number of nodes
 			fread(&index,  sizeof(int), 1, f);			
 
 			vQuadtreeNode * vec = malloc(sizeof(vQuadtreeNode) * index);
 
-			// Citire vectorul de noduri
+			// Read nodes vector
 			fread(vec, sizeof(vQuadtreeNode), index, f);
 			fclose(f);
 
-			QuadtreeNode *nod = NULL;
-			citire_arb(vec, &nod, 0);
+			QuadtreeNode *node = NULL;
+			read_tree(vec, &node, 0);
 			free(vec);
 
-			uint32_t size = sqrt(nod->area);
+			uint32_t size = sqrt(node->area);
 			
-			// Alocare matrice de culori			
+			// Alloc rgb matrix						
 			rgb_t ** mat = (rgb_t**) malloc(sizeof(rgb_t*) * size); 
 			for(i = 0; i < size; i++)	
 				mat[i] = malloc(sizeof(rgb_t) * size);
 			
-			decompresie(nod, &mat, 0, 0, size);
-			scriere_ppm(mat, argv[3], size);
+			decompression(node, &mat, 0, 0, size);
+			write_ppm(mat, argv[3], size);
 
-			// Dealocare
+			// Free memory
 			for(i = 0; i < size; i++)
 				free(mat[i]);
 			free(mat);
@@ -504,35 +502,35 @@ int main(int argc, char * argv[])
 			if (strcmp(argv[1], "-m") == 0)
 			{
 				unsigned int i;
-				int prag, width, height;
+				int threshold, width, height;
 				rgb_t ** r;
-				QuadtreeNode * nod = NULL;
+				QuadtreeNode * node = NULL;
 				
-				prag = atoi(argv[3]);
-				r = citire(&height, &width, argv[4]);
+				threshold = atoi(argv[3]);
+				r = read(&height, &width, argv[4]);
 
-				compresie(r, &nod, 0, 0, width, prag);
+				compression(r, &node, 0, 0, width, threshold);
 				
-				// Verificare tip oglindire
+				// Check mirror type
 				if(strcmp(argv[2], "v") == 0)
-					orizontala(&nod);
+					horizontal(&node);
 				else
 					if(strcmp(argv[2], "h") == 0)
-						verticala(&nod);
+						vertical(&node);
 					else
 						if(strcmp(argv[2], "n") != 0)
 						printf("Wrong type\n");
 							
 			
-				// Alocare matrice de culori			
+				// Alloc rgb matrix			
 				rgb_t ** mat = (rgb_t**)malloc(sizeof(rgb_t*) * width);
 				for(i = 0; i < width; i++)		
 					mat[i] = malloc(sizeof(rgb_t) * width);
 			
-				decompresie(nod, &mat, 0, 0, width);
-				scriere_ppm(mat, argv[5], width);
+				decompression(node, &mat, 0, 0, width);
+				write_ppm(mat, argv[5], width);
 				
-				// Dealocare
+				// Free
 				for(i = 0; i < width; i++)
 					free(mat[i]);
 				free(mat);
@@ -545,36 +543,36 @@ int main(int argc, char * argv[])
 				if (strcmp(argv[1], "-o") == 0)
 				{
 					unsigned int i;
-					int prag, width, height;
+					int threshold, width, height;
 
 					rgb_t ** r1;
 					rgb_t ** r2;
 					
-					QuadtreeNode * nod1=NULL;
-					QuadtreeNode * nod2=NULL;
+					QuadtreeNode * node1=NULL;
+					QuadtreeNode * node2=NULL;
 
-					prag = atoi(argv[2]);
+					threshold = atoi(argv[2]);
 
-					r1 = citire(&height, &width, argv[3]);
-					r2 = citire(&height, &width, argv[4]);
+					r1 = read(&height, &width, argv[3]);
+					r2 = read(&height, &width, argv[4]);
 
-					compresie(r1, &nod1, 0, 0, width, prag);
-					compresie(r2, &nod2, 0, 0, width, prag);
+					compression(r1, &node1, 0, 0, width, threshold);
+					compression(r2, &node2, 0, 0, width, threshold);
 
-					QuadtreeNode * nodsup = NULL;
-					suprapunere(nod1, nod2, &nodsup);
+					QuadtreeNode * node_overlay = NULL;
+					overlay(node1, node2, &node_overlay);
  
- 					// Alocare matrice de culori			
+ 					// Alloc rgb matrix			
 					rgb_t ** mat = (rgb_t**) malloc(sizeof(rgb_t*) * width);
 					for(i = 0; i < width; i++)	
 						mat[i] = malloc(sizeof(rgb_t) * width);
 					
-					decompresie(nodsup, &mat, 0, 0, width);
-					scriere_ppm(mat, argv[5], width);
+					decompression(node_overlay, &mat, 0, 0, width);
+					write_ppm(mat, argv[5], width);
 					
-					// Dealocari
-					free_arb(&nod1);
-					free_arb(&nod2);
+					// Free
+					free_tree(&node1);
+					free_tree(&node2);
 
 					for(i = 0; i < width; i++)
 						free(mat[i]);
